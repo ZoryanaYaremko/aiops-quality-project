@@ -1,0 +1,13 @@
+replicaCount: 1
+
+image:
+  repository: aiops-quality-project
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+  MODEL_PATH: "model/model.joblib"

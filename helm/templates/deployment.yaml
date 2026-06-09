@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiops-quality-project
+  labels:
+    app: aiops-quality-project
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: aiops-quality-project
+  template:
+    metadata:
+      labels:
+        app: aiops-quality-project
+    spec:
+      containers:
+        - name: aiops-quality-project
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_PATH
+              value: "{{ .Values.env.MODEL_PATH }}"
