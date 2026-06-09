@@ -24,7 +24,7 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "increase(prediction_requests_total[5m])"
+          "expr": "drift_events_total"
         }
       ]
     }
