@@ -11,7 +11,7 @@ from prometheus_client import Counter, Histogram, generate_latest
 from fastapi.responses import Response
 
 
-MODEL_PATH = "model/model.joblib"
+MODEL_PATH = os.getenv("MODEL_PATH", "model/model.joblib")
 
 app = FastAPI(title="AIOps Quality Project")
 
@@ -26,6 +26,11 @@ request_counter = Counter(
 prediction_latency = Histogram(
     "prediction_latency_seconds",
     "Prediction latency"
+)
+
+drift_counter = Counter(
+    "drift_events_total",
+    "Total drift detection events"
 )
 
 
@@ -53,11 +58,8 @@ def predict(features):
 
 
 def drift_detector(features):
-    """
-    Mock drift detector.
-    """
-
     if np.mean(features) > 5:
+        drift_counter.inc()
         logging.warning("Drift detected")
         print("Drift detected")
         return True
@@ -67,7 +69,6 @@ def drift_detector(features):
 
 @app.post("/predict")
 def prediction(request: PredictionRequest):
-
     start_time = time.time()
 
     request_counter.inc()
