@@ -8,7 +8,7 @@ spec:
 
   source:
     repoURL: https://github.com/ZoryanaYaremko/aiops-quality-project.git
-    targetRevision: main
+    targetRevision: final-project
     path: helm
 
   destination:
