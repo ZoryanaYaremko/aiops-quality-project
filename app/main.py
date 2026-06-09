@@ -3,6 +3,7 @@ import time
 import logging
 import joblib
 import numpy as np
+import requests
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -12,9 +13,9 @@ from fastapi.responses import Response
 
 
 MODEL_PATH = os.getenv("MODEL_PATH", "model/model.joblib")
+GITLAB_WEBHOOK_URL = os.getenv("GITLAB_WEBHOOK_URL", "")
 
 app = FastAPI(title="AIOps Quality Project")
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,7 +33,6 @@ drift_counter = Counter(
     "drift_events_total",
     "Total drift detection events"
 )
-
 
 model = None
 
@@ -57,11 +57,24 @@ def predict(features):
     return int(prediction[0])
 
 
+def trigger_retrain_pipeline():
+    if not GITLAB_WEBHOOK_URL:
+        logging.info("GitLab webhook URL is not configured. Retrain pipeline was not triggered.")
+        return
+
+    try:
+        response = requests.post(GITLAB_WEBHOOK_URL, timeout=5)
+        logging.info(f"Retrain pipeline trigger response: {response.status_code}")
+    except Exception as error:
+        logging.error(f"Failed to trigger retrain pipeline: {error}")
+
+
 def drift_detector(features):
     if np.mean(features) > 5:
         drift_counter.inc()
         logging.warning("Drift detected")
         print("Drift detected")
+        trigger_retrain_pipeline()
         return True
 
     return False

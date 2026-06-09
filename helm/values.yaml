@@ -11,3 +11,4 @@ service:
 
 env:
   MODEL_PATH: "model/model.joblib"
+  GITLAB_WEBHOOK_URL: ""
