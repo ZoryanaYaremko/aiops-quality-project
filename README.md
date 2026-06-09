@@ -304,3 +304,33 @@ Pipeline can be triggered manually or by drift detection events.
 * [x] Helm chart created
 * [x] Service configured
 * [x] Deployment configured
+
+---
+
+## Screenshots
+
+The following screenshots should be added after final verification:
+
+### FastAPI Health Check
+
+![FastAPI Health Check](screenshots/health.png)
+
+### Prediction Request
+
+![Prediction Request](screenshots/predict.png)
+
+### Drift Detection Logs
+
+![Drift Detection Logs](screenshots/drift.png)
+
+### Metrics Endpoint
+
+![Metrics Endpoint](screenshots/metrics.png)
+
+### Grafana Dashboard
+
+![Grafana Dashboard](screenshots/grafana.png)
+
+### ArgoCD Application
+
+![ArgoCD Application](screenshots/argocd.png)
