@@ -1,0 +1,12 @@
+loki:
+  auth_enabled: false
+
+singleBinary:
+  replicas: 1
+
+persistence:
+  enabled: false
+
+service:
+  type: ClusterIP
+  port: 3100
