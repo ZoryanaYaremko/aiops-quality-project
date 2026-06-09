@@ -1,0 +1,26 @@
+stages:
+  - retrain
+  - build
+
+retrain-model:
+  stage: retrain
+  image: python:3.13-slim
+  script:
+    - pip install -r requirements.txt
+    - python model/train.py
+  artifacts:
+    paths:
+      - model/model.joblib
+    expire_in: 1 week
+  when: manual
+
+build-image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t aiops-quality-project:latest .
+  needs:
+    - retrain-model
+  when: manual
