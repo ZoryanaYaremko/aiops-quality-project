@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: aiops-quality-project
+  repository: zoryanayaremko/aiops-quality-project
   tag: "latest"
   pullPolicy: IfNotPresent
 
