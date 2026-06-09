@@ -1,0 +1,32 @@
+{
+  "title": "AIOps Quality Project Dashboard",
+  "panels": [
+    {
+      "title": "Prediction Requests Total",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "prediction_requests_total"
+        }
+      ]
+    },
+    {
+      "title": "Prediction Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "prediction_latency_seconds_sum / prediction_latency_seconds_count"
+        }
+      ]
+    },
+    {
+      "title": "Drift Detection Events",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "increase(prediction_requests_total[5m])"
+        }
+      ]
+    }
+  ]
+}
