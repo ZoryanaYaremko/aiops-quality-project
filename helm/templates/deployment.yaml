@@ -23,3 +23,5 @@ spec:
           env:
             - name: MODEL_PATH
               value: "{{ .Values.env.MODEL_PATH }}"
+            - name: GITLAB_WEBHOOK_URL
+              value: "{{ .Values.env.GITLAB_WEBHOOK_URL }}"
