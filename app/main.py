@@ -2,7 +2,6 @@ import os
 import time
 import logging
 import joblib
-import numpy as np
 import requests
 
 from fastapi import FastAPI
@@ -10,6 +9,8 @@ from pydantic import BaseModel
 
 from prometheus_client import Counter, Histogram, generate_latest
 from fastapi.responses import Response
+
+from app.drift import DriftDetector
 
 
 MODEL_PATH = os.getenv("MODEL_PATH", "model/model.joblib")
@@ -35,6 +36,7 @@ drift_counter = Counter(
 )
 
 model = None
+drift_detector_service = DriftDetector()
 
 
 @app.on_event("startup")
@@ -69,15 +71,16 @@ def trigger_retrain_pipeline():
         logging.error(f"Failed to trigger retrain pipeline: {error}")
 
 
-def drift_detector(features):
-    if np.mean(features) > 5:
+def detect_drift(features):
+    is_drift = drift_detector_service.detect(features)
+
+    if is_drift:
         drift_counter.inc()
         logging.warning("Drift detected")
         print("Drift detected")
         trigger_retrain_pipeline()
-        return True
 
-    return False
+    return is_drift
 
 
 @app.post("/predict")
@@ -88,7 +91,7 @@ def prediction(request: PredictionRequest):
 
     logging.info(f"Incoming request: {request.features}")
 
-    drift_detector(request.features)
+    detect_drift(request.features)
 
     result = predict(request.features)
 
