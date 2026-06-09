@@ -2,20 +2,21 @@
 
 ## Overview
 
-This project demonstrates an end-to-end AIOps and MLOps workflow using:
+This project demonstrates an end-to-end AIOps and MLOps workflow deployed on Kubernetes using:
 
 * FastAPI
 * Machine Learning Model
-* Drift Detection
+* Alibi Detect
 * Prometheus
 * Grafana
-* Loki / Promtail
+* Loki
+* Promtail
 * GitLab CI
 * Helm
 * ArgoCD
 * Kubernetes
 
-The system performs online inference, monitors model behavior, detects potential data drift, and supports automated retraining workflows.
+The system performs online inference, monitors model behavior, detects potential data drift, exposes operational metrics, collects logs, and supports automated retraining workflows.
 
 ---
 
@@ -24,7 +25,8 @@ The system performs online inference, monitors model behavior, detects potential
 ```text
 aiops-quality-project/
 ├── app/
-│   └── main.py
+│   ├── main.py
+│   └── drift.py
 ├── model/
 │   └── train.py
 ├── helm/
@@ -39,6 +41,8 @@ aiops-quality-project/
 │   └── dashboards.json
 ├── prometheus/
 │   └── additionalScrapeConfigs.yaml
+├── loki/
+├── promtail/
 ├── screenshots/
 ├── Dockerfile
 ├── requirements.txt
@@ -47,27 +51,29 @@ aiops-quality-project/
 ```
 
 The trained model artifact (`model.joblib`) is generated during training and is not stored in the repository.
+
 ---
 
-## Architecture
+# Architecture
 
-### FastAPI Service
+## FastAPI Inference Service
 
 The FastAPI application:
 
 * Loads the model during startup
 * Accepts prediction requests
 * Logs incoming requests
-* Detects drift conditions
+* Performs drift detection using Alibi Detect
 * Exposes Prometheus metrics
+* Can trigger GitLab retraining pipeline via webhook
 
-Endpoints:
+### Endpoints
 
-| Endpoint | Description        |
-| -------- | ------------------ |
-| /health  | Health check       |
-| /predict | Model inference    |
-| /metrics | Prometheus metrics |
+| Endpoint   | Description        |
+| ---------- | ------------------ |
+| `/health`  | Health check       |
+| `/predict` | Model inference    |
+| `/metrics` | Prometheus metrics |
 
 ---
 
@@ -83,7 +89,9 @@ The script:
 
 * Loads Iris dataset
 * Trains RandomForestClassifier
-* Saves model to:
+* Saves model artifact
+
+Output:
 
 ```text
 model/model.joblib
@@ -91,21 +99,21 @@ model/model.joblib
 
 ---
 
-## Running Locally
+# Running Locally
 
-Install dependencies:
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Train model:
+## Train Model
 
 ```bash
 python model/train.py
 ```
 
-Run API:
+## Start FastAPI
 
 ```bash
 uvicorn app.main:app --reload
@@ -113,7 +121,7 @@ uvicorn app.main:app --reload
 
 ---
 
-## Testing Prediction
+# Testing Prediction
 
 Example request:
 
@@ -133,44 +141,63 @@ Example response:
 
 ---
 
-## Drift Detection
+# Drift Detection
 
-The application includes a simple drift detector.
+The application uses **Alibi Detect** for data drift detection.
 
-Example:
-
-```json
-{
-  "features":[10,10,10,10]
-}
-```
+Incoming feature vectors are analyzed against a reference distribution generated from training data.
 
 When drift is detected:
 
-```text
-WARNING: Drift detected
+* A warning is written to application logs
+* Drift metrics are incremented
+* GitLab retraining webhook may be triggered
+
+Example drift request:
+
+```json
+{
+  "features": [10, 10, 10, 10]
+}
 ```
 
-appears in application logs.
+Example log output:
+
+```text
+INFO:root:Incoming request: [10.0, 10.0, 10.0, 10.0]
+WARNING:root:Drift detected by Alibi Detect
+WARNING:root:Drift detected
+Drift detected
+```
 
 ---
 
-## Logging
+# Logging
 
 Application logs are written to stdout.
 
 Example:
 
 ```text
-Incoming request: [10.0,10.0,10.0,10.0]
-WARNING: Drift detected
+INFO:root:Incoming request: [5.1, 3.5, 1.4, 0.2]
 ```
 
-Logs are collected by Promtail and stored in Loki.
+Drift example:
+
+```text
+WARNING:root:Drift detected by Alibi Detect
+```
+
+Logs are collected by:
+
+* Promtail
+* Loki
+
+and can be visualized through Grafana.
 
 ---
 
-## Prometheus Metrics
+# Prometheus Metrics
 
 Metrics endpoint:
 
@@ -178,51 +205,54 @@ Metrics endpoint:
 /metrics
 ```
 
-Available metrics:
+Available custom metrics:
 
 ```text
 prediction_requests_total
 prediction_latency_seconds
+drift_events_total
 ```
 
 ---
 
-## Grafana Dashboard
+# Grafana Dashboard
 
-Dashboard panels:
+Dashboard visualizes:
 
-* Prediction Requests Total
+* Prediction Requests
 * Prediction Latency
 * Drift Detection Events
+* Kubernetes Resource Usage
 
-Grafana visualizes service performance and model activity.
+Grafana provides real-time monitoring of service behavior and cluster resources.
 
 ---
 
-## Helm Deployment
+# Helm Deployment
 
-Deploy chart:
+Deploy application:
 
 ```bash
 helm install aiops-quality-project ./helm
 ```
 
-Configuration:
-
-* Image repository
-* Image tag
-* Service port
-* Environment variables
-
-are managed through:
+Configuration is managed through:
 
 ```text
 helm/values.yaml
 ```
 
+Including:
+
+* Image repository
+* Image tag
+* Service port
+* Environment variables
+* GitLab webhook URL
+
 ---
 
-## ArgoCD
+# ArgoCD
 
 Application manifest:
 
@@ -236,15 +266,15 @@ Features:
 * Self Heal
 * Namespace Auto Creation
 
-ArgoCD continuously synchronizes Kubernetes resources with Git.
+ArgoCD continuously synchronizes Kubernetes resources with Git repository state.
 
 ---
 
-## GitLab CI
+# GitLab CI
 
 Pipeline stages:
 
-### Retrain Model
+## Retrain Model
 
 ```bash
 python model/train.py
@@ -256,51 +286,58 @@ Produces:
 model/model.joblib
 ```
 
-### Build Image
+## Build Image
 
 ```bash
 docker build -t aiops-quality-project .
 ```
 
-Pipeline can be triggered manually or by drift detection events.
+Pipeline can be triggered:
+
+* Manually from GitLab
+* Automatically through webhook invocation from drift detector
 
 ---
 
-## Updating the Model
+# Updating the Model
 
-1. Modify training logic.
-2. Run retrain pipeline.
-3. Generate new model artifact.
-4. Build new Docker image.
-5. Commit changes.
-6. ArgoCD automatically redeploys the application.
+1. Modify training logic
+2. Run retraining pipeline
+3. Generate new model artifact
+4. Build new Docker image
+5. Commit changes
+6. Push changes to repository
+7. ArgoCD automatically redeploys application
 
 ---
 
-## Verification Checklist
+# Verification Checklist
 
-### API
+## API
 
 * [x] Health endpoint works
 * [x] Prediction endpoint works
 * [x] Metrics endpoint works
 
-### Drift Detection
+## Drift Detection
 
+* [x] Alibi Detect configured
 * [x] Drift warning appears in logs
+* [x] Drift metric is generated
 
-### Monitoring
+## Monitoring
 
 * [x] Metrics exposed to Prometheus
-* [x] Dashboard configured for Grafana
+* [x] Dashboard configured in Grafana
+* [x] Logs collected by Loki
 
-### CI/CD
+## CI/CD
 
 * [x] Retrain pipeline configured
 * [x] Docker build configured
 * [x] ArgoCD auto-sync enabled
 
-### Kubernetes
+## Kubernetes
 
 * [x] Helm chart created
 * [x] Service configured
@@ -308,30 +345,54 @@ Pipeline can be triggered manually or by drift detection events.
 
 ---
 
-## Screenshots
+# Screenshots
 
-The following screenshots should be added after final verification:
-
-### FastAPI Health Check
+## FastAPI Health Check
 
 ![FastAPI Health Check](screenshots/health.png)
 
-### Prediction Request
+## Prediction Request
 
 ![Prediction Request](screenshots/predict.png)
 
-### Drift Detection Logs
+## Drift Detection Logs
 
 ![Drift Detection Logs](screenshots/drift.png)
 
-### Metrics Endpoint
+## Metrics Endpoint
 
 ![Metrics Endpoint](screenshots/metrics.png)
 
-### Grafana Dashboard
+## Grafana Dashboard
 
 ![Grafana Dashboard](screenshots/grafana.png)
 
-### ArgoCD Application
+## ArgoCD Application
 
 ![ArgoCD Application](screenshots/argocd.png)
+
+---
+
+# Technologies Used
+
+* Python
+* FastAPI
+* Scikit-Learn
+* Alibi Detect
+* Prometheus
+* Grafana
+* Loki
+* Promtail
+* Docker
+* Kubernetes
+* Helm
+* ArgoCD
+* GitLab CI
+
+---
+
+# Author
+
+Zoryana Yaremko
+
+GoIT MLOps Final Project
