@@ -26,8 +26,7 @@ aiops-quality-project/
 ├── app/
 │   └── main.py
 ├── model/
-│   ├── train.py
-│   └── model.joblib
+│   └── train.py
 ├── helm/
 │   ├── Chart.yaml
 │   ├── values.yaml
@@ -40,12 +39,14 @@ aiops-quality-project/
 │   └── dashboards.json
 ├── prometheus/
 │   └── additionalScrapeConfigs.yaml
+├── screenshots/
 ├── Dockerfile
 ├── requirements.txt
 ├── .gitlab-ci.yml
 └── README.md
 ```
 
+The trained model artifact (`model.joblib`) is generated during training and is not stored in the repository.
 ---
 
 ## Architecture
